@@ -31,14 +31,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install router
-        run: pip install -e .
-      - name: Create practice issue (starts route → agent chain)
+      - name: Install router + optional Cursor SDK
+        run: |
+          pip install -e .
+          pip install "cursor-sdk>=0.1.0"
+      - name: Create practice issue
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           SCENARIO="${{ github.event_name == 'workflow_dispatch' && inputs.scenario || 'random' }}"
           python scripts/run_practice_drill.py --scenario "$SCENARIO" | tee drill-result.json
+      - name: Route + triage agent (same job — bot-opened issues skip workflow triggers)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: |
+          NUMBER=$(python -c "import json; print(json.load(open('drill-result.json'))['number'])")
+          python scripts/synthesize_github_event.py \
+            --number "$NUMBER" \
+            --output "$RUNNER_TEMP/github-event.json"
+          python github_route.py \
+            --event "$RUNNER_TEMP/github-event.json" \
+            --backend auto \
+            --output route-result.json \
+            --apply-labels \
+            --post-comment
+          python scripts/run_agent_from_route.py route-result.json --backend auto
       - name: Drill metadata
         run: cat drill-result.json
