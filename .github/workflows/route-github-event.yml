@@ -39,7 +39,11 @@ jobs:
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: |
-          python github_route.py --backend auto --output route-result.json
+          EVENT_ARGS=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EVENT_ARGS=(--event "$RUNNER_TEMP/github-event.json")
+          fi
+          python github_route.py "${EVENT_ARGS[@]}" --backend auto --output route-result.json
           cat route-result.json
       - uses: actions/upload-artifact@v4
         with:
@@ -53,4 +57,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: |
-          python github_route.py --backend auto --apply-labels --post-comment --no-queue
+          EVENT_ARGS=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EVENT_ARGS=(--event "$RUNNER_TEMP/github-event.json")
+          fi
+          python github_route.py "${EVENT_ARGS[@]}" --backend auto --apply-labels --post-comment --no-queue

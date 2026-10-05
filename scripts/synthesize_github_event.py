@@ -39,6 +39,9 @@ def main() -> int:
             "issue": issue,
             "repository": {"full_name": args.repo},
         }
+    if "issue" not in event and "pull_request" not in event:
+        print("Synthesized event missing issue/PR payload", file=sys.stderr)
+        return 2
     args.output.write_text(json.dumps(event), encoding="utf-8")
     print(args.output)
     return 0

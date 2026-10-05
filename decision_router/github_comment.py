@@ -27,7 +27,7 @@ def format_route_comment(payload: Mapping[str, Any]) -> str:
         f"| urgency | `{urgency.get('label', 'n/a')}` ({urgency.get('confidence', 0):.2f}) |\n"
         f"| suggested label | {label_line} |\n"
         f"| label applied | {label_applied} |\n\n"
-        "Queue JSON is attached to the workflow artifact `github-route-*` for Hermes/worker handoff.\n"
+        "A triage agent workflow runs automatically after this job (no manual artifact download).\n"
     )
 
 
