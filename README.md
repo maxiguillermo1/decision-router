@@ -38,7 +38,8 @@ export TYPESAFE_API_KEY=...
 | `github_route.py` | Issues/PRs → `router-*` labels + optional `queue/github/` JSON |
 | `scripts/consume_one.py` | Demo worker: oldest job → status bump |
 | `.github/workflows/route-github-event.yml` | On issue/PR open: route → artifact + label + triage comment |
-| `.github/workflows/consume-github-queue.yml` | After route succeeds: demo worker marks queue job `done` + comment |
+| `scripts/run_agent_from_route.py` | Post-route worker: Cursor cloud agent or template fallback → comment + queue `done` |
+| `.github/workflows/consume-github-queue.yml` | After route succeeds: runs triage agent automatically (no manual artifact step) |
 
 ## Confidence floor
 
@@ -55,12 +56,16 @@ Local replay of an event fixture:
 On **this repo**, the loop is fully automatic:
 
 1. Open or reopen an issue/PR → **route-github-event** runs (rules, or Jev if `TYPESAFE_API_KEY` secret is set).
-2. You get a **triage comment**, optional `router-*` label (confidence ≥ 0.85 + safe_auto), and artifact `github-route-<run_id>` (`route-result.json` + `queue/github/...`).
-3. **consume-github-queue** runs on success → demo worker sets queue job `done` and posts a second comment.
+2. **Triage comment** on the thread + optional `router-*` label (confidence ≥ 0.85 + safe_auto).
+3. **consume-github-queue** runs automatically → **triage agent** posts a second comment and marks the queue job `done`.
+   - With repo secret **`CURSOR_API_KEY`**: Cursor **cloud** agent reads the repo and drafts the comment.
+   - Without it: **template** agent still posts structured next steps (zero manual steps on your side).
 
-Re-run without a new issue: Actions → **route-github-event** → Run workflow → enter issue/PR number.
+You do not download artifacts or run local commands for the default loop.
 
-Optional repo secret: `TYPESAFE_API_KEY` for `--backend auto` on ambiguous traffic only (add later); rules-only works with no secrets.
+Re-run routing: Actions → **route-github-event** → Run workflow → issue/PR number.
+
+Optional secrets: `CURSOR_API_KEY` (cloud triage), `TYPESAFE_API_KEY` (Jev backend on gray-zone events).
 
 Wire to your org: fork, tune heuristics in `decision_router/backends/rules.py`, or swap `--backend jev` when you have TypeSafe credentials.
 

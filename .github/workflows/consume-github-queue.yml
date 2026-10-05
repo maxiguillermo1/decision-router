@@ -12,45 +12,27 @@ permissions:
   actions: read
 
 jobs:
-  demo-worker:
+  triage-agent:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e .
+      - name: Install router + optional Cursor SDK
+        run: |
+          pip install -e .
+          pip install "cursor-sdk>=0.1.0"
       - uses: actions/download-artifact@v4
         with:
           name: github-route-${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Consume queue job
-        id: worker
-        run: |
-          python scripts/consume_from_route_result.py route-result.json --mark done | tee worker-summary.json
-      - name: Post worker comment
-        if: success()
+      - name: Run triage agent (Cursor or template fallback)
         env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from decision_router.github_comment import post_worker_comment
-
-          route = json.loads(Path("route-result.json").read_text())
-          summary_path = Path("worker-summary.json")
-          if summary_path.is_file():
-              summary = json.loads(summary_path.read_text())
-          else:
-              summary = {"error": "worker did not run"}
-          repo = route.get("repo")
-          num = route.get("number")
-          if repo and num:
-              post_worker_comment(repo, int(num), summary)
-          PY
+          python scripts/run_agent_from_route.py route-result.json --backend auto | tee agent-summary.json
