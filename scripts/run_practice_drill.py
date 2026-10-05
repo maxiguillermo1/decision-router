@@ -78,7 +78,7 @@ def main() -> int:
         "issue_url": url,
         "number": int(number) if number.isdigit() else number,
         "repo": repo,
-        "note": "route-github-event and consume-github-queue will run without manual steps",
+        "note": "practice-lab-drill runs route + triage agent in the same workflow job",
     }
     print(json.dumps(out, indent=2))
     return 0
