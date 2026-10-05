@@ -5,6 +5,11 @@ on:
     types: [opened, reopened]
   pull_request:
     types: [opened, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue or PR number to re-run the router on
+        required: true
 
 permissions:
   issues: write
@@ -21,16 +26,31 @@ jobs:
           python-version: "3.12"
       - name: Install router
         run: pip install -e .
-      - name: Decide route
-        id: route
+      - name: Synthesize webhook event (manual rerun)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python github_route.py --no-queue --output route-result.json
+          python scripts/synthesize_github_event.py \
+            --number "${{ inputs.issue_number }}" \
+            --output "$RUNNER_TEMP/github-event.json"
+          echo "GITHUB_EVENT_PATH=$RUNNER_TEMP/github-event.json" >> "$GITHUB_ENV"
+      - name: Decide route (rules or Jev if secret set)
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: |
+          python github_route.py --backend auto --output route-result.json
           cat route-result.json
       - uses: actions/upload-artifact@v4
         with:
           name: github-route-${{ github.run_id }}
-          path: route-result.json
-      - name: Apply routing label
+          path: |
+            route-result.json
+            queue/github/**/*
+          if-no-files-found: ignore
+      - name: Apply routing label + triage comment
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python github_route.py --apply-labels --no-queue
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: |
+          python github_route.py --backend auto --apply-labels --post-comment --no-queue

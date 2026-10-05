@@ -37,7 +37,8 @@ export TYPESAFE_API_KEY=...
 | `engage_gate.py` | Playbook pattern F — skip / draft_* / escalate (never auto-post) |
 | `github_route.py` | Issues/PRs → `router-*` labels + optional `queue/github/` JSON |
 | `scripts/consume_one.py` | Demo worker: oldest job → status bump |
-| `.github/workflows/route-github-event.yml` | On issue/PR open: rules router + label gate (no auto-merge) |
+| `.github/workflows/route-github-event.yml` | On issue/PR open: route → artifact + label + triage comment |
+| `.github/workflows/consume-github-queue.yml` | After route succeeds: demo worker marks queue job `done` + comment |
 
 ## Confidence floor
 
@@ -51,7 +52,15 @@ Local replay of an event fixture:
 .venv/bin/python github_route.py --event tests/fixtures/issue_opened.json --no-queue
 ```
 
-With `gh` installed, open a test issue on this repo — workflow **route-github-event** uploads `route-result.json` and adds a `router-*` label when `github_safe_auto_label` passes the confidence floor (same 0.85 policy gate as `chief.py`).
+On **this repo**, the loop is fully automatic:
+
+1. Open or reopen an issue/PR → **route-github-event** runs (rules, or Jev if `TYPESAFE_API_KEY` secret is set).
+2. You get a **triage comment**, optional `router-*` label (confidence ≥ 0.85 + safe_auto), and artifact `github-route-<run_id>` (`route-result.json` + `queue/github/...`).
+3. **consume-github-queue** runs on success → demo worker sets queue job `done` and posts a second comment.
+
+Re-run without a new issue: Actions → **route-github-event** → Run workflow → enter issue/PR number.
+
+Optional repo secret: `TYPESAFE_API_KEY` for `--backend auto` on ambiguous traffic only (add later); rules-only works with no secrets.
 
 Wire to your org: fork, tune heuristics in `decision_router/backends/rules.py`, or swap `--backend jev` when you have TypeSafe credentials.
 

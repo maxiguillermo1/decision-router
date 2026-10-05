@@ -12,6 +12,7 @@ from pathlib import Path
 
 from decision_router import system_one
 from decision_router.github_event import state_from_event
+from decision_router.github_comment import format_route_comment, post_route_comment
 from decision_router.github_labels import label_for_destination
 from decision_router.handoff import enqueue_handoff
 from decision_router.recipes import (
@@ -53,6 +54,11 @@ def _parse_args() -> argparse.Namespace:
         "--apply-labels",
         action="store_true",
         help="Add routing label via gh (needs GITHUB_REPOSITORY + number in event)",
+    )
+    p.add_argument(
+        "--post-comment",
+        action="store_true",
+        help="Post triage summary comment via gh (issues and PRs)",
     )
     return p.parse_args()
 
@@ -187,6 +193,12 @@ def main() -> int:
                 "Skipped label apply: confidence/safe_auto_label gate",
                 file=sys.stderr,
             )
+    if args.post_comment and out.get("repo") and out.get("number"):
+        post_route_comment(
+            out["repo"],
+            int(out["number"]),
+            format_route_comment(payload),
+        )
     return 0
 
 

@@ -1,0 +1,56 @@
+name: consume-github-queue
+
+on:
+  workflow_run:
+    workflows: [route-github-event]
+    types: [completed]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+  actions: read
+
+jobs:
+  demo-worker:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-route-${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Consume queue job
+        id: worker
+        run: |
+          python scripts/consume_from_route_result.py route-result.json --mark done | tee worker-summary.json
+      - name: Post worker comment
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from decision_router.github_comment import post_worker_comment
+
+          route = json.loads(Path("route-result.json").read_text())
+          summary_path = Path("worker-summary.json")
+          if summary_path.is_file():
+              summary = json.loads(summary_path.read_text())
+          else:
+              summary = {"error": "worker did not run"}
+          repo = route.get("repo")
+          num = route.get("number")
+          if repo and num:
+              post_worker_comment(repo, int(num), summary)
+          PY

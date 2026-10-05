@@ -1,0 +1,55 @@
+"""Post human-visible triage comments on issues/PRs (no auto-merge)."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from typing import Any, Mapping
+
+
+def format_route_comment(payload: Mapping[str, Any]) -> str:
+    urgency = payload.get("urgency") or {}
+    safe = payload.get("safe_auto_label") or {}
+    label = payload.get("label")
+    label_line = f"`{label}`" if label else "_skipped (confidence gate)_"
+    if safe.get("value") and (safe.get("confidence") or 0) >= 0.85:
+        label_applied = "yes" if label else "n/a"
+    else:
+        label_applied = "no (safe_auto_label gate)"
+
+    return (
+        "## Decision router (automated triage)\n\n"
+        "Cheap first pass only — **labels/comments, never auto-merge or auto-close.**\n\n"
+        f"| Field | Value |\n| --- | --- |\n"
+        f"| destination | `{payload.get('destination')}` |\n"
+        f"| choice | `{payload.get('choice')}` ({payload.get('confidence'):.2f}) |\n"
+        f"| backend | `{payload.get('backend')}` |\n"
+        f"| urgency | `{urgency.get('label', 'n/a')}` ({urgency.get('confidence', 0):.2f}) |\n"
+        f"| suggested label | {label_line} |\n"
+        f"| label applied | {label_applied} |\n\n"
+        "Queue JSON is attached to the workflow artifact `github-route-*` for Hermes/worker handoff.\n"
+    )
+
+
+def post_route_comment(repo: str, number: int, body: str) -> None:
+    subprocess.run(
+        [
+            "gh",
+            "api",
+            f"repos/{repo}/issues/{number}/comments",
+            "--input",
+            "-",
+        ],
+        input=json.dumps({"body": body}),
+        text=True,
+        check=True,
+    )
+
+
+def post_worker_comment(repo: str, number: int, summary: Mapping[str, Any]) -> None:
+    body = (
+        "## Decision router (demo worker)\n\n"
+        f"Consumed oldest queue job → status `{summary.get('status')}`.\n\n"
+        f"```json\n{json.dumps(summary, indent=2)}\n```\n"
+    )
+    post_route_comment(repo, number, body)
