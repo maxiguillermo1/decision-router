@@ -14,6 +14,7 @@ from decision_router import system_one
 from decision_router.github_event import state_from_event
 from decision_router.github_comment import format_route_comment, post_route_comment
 from decision_router.github_labels import label_for_destination
+from decision_router.label_policy import should_apply_routing_label
 from decision_router.handoff import enqueue_handoff
 from decision_router.recipes import (
     GITHUB_ISSUE_ROUTE,
@@ -184,9 +185,8 @@ def main() -> int:
 
     print(json.dumps(payload, indent=2))
 
-    safe = out.get("safe_auto_label") or {}
     if args.apply_labels and out.get("label") and out.get("repo") and out.get("number"):
-        if safe.get("value") and (safe.get("confidence") or 0) >= args.confidence_floor:
+        if should_apply_routing_label(payload, args.confidence_floor):
             apply_label(out["repo"], int(out["number"]), out["label"], out["kind"])
         else:
             print(

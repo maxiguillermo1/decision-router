@@ -6,16 +6,18 @@ import json
 import subprocess
 from typing import Any, Mapping
 
+from decision_router.label_policy import label_applied_note
+from decision_router.types import DEFAULT_CONFIDENCE_FLOOR
 
-def format_route_comment(payload: Mapping[str, Any]) -> str:
+
+def format_route_comment(
+    payload: Mapping[str, Any],
+    confidence_floor: float = DEFAULT_CONFIDENCE_FLOOR,
+) -> str:
     urgency = payload.get("urgency") or {}
-    safe = payload.get("safe_auto_label") or {}
     label = payload.get("label")
     label_line = f"`{label}`" if label else "_skipped (confidence gate)_"
-    if safe.get("value") and (safe.get("confidence") or 0) >= 0.85:
-        label_applied = "yes" if label else "n/a"
-    else:
-        label_applied = "no (safe_auto_label gate)"
+    label_applied = label_applied_note(payload, confidence_floor)
 
     return (
         "## Decision router (automated triage)\n\n"

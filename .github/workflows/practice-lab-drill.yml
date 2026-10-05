@@ -1,0 +1,44 @@
+name: practice-lab-drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Which routing path to exercise
+        required: true
+        default: random
+        type: choice
+        options:
+          - random
+          - security
+          - bug
+          - spam
+          - triage
+  push:
+    branches: [main]
+    paths:
+      - lab/drills/**
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  open-drill-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install router
+        run: pip install -e .
+      - name: Create practice issue (starts route → agent chain)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          SCENARIO="${{ github.event_name == 'workflow_dispatch' && inputs.scenario || 'random' }}"
+          python scripts/run_practice_drill.py --scenario "$SCENARIO" | tee drill-result.json
+      - name: Drill metadata
+        run: cat drill-result.json

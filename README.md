@@ -40,6 +40,7 @@ export TYPESAFE_API_KEY=...
 | `.github/workflows/route-github-event.yml` | On issue/PR open: route → artifact + label + triage comment |
 | `scripts/run_agent_from_route.py` | Post-route worker: Cursor cloud agent or template fallback → comment + queue `done` |
 | `.github/workflows/consume-github-queue.yml` | After route succeeds: runs triage agent automatically (no manual artifact step) |
+| `.github/workflows/practice-lab-drill.yml` | Opens a `[lab-drill]` issue (dispatch or push under `lab/drills/`) → full loop → auto-close |
 
 ## Confidence floor
 
@@ -62,6 +63,8 @@ On **this repo**, the loop is fully automatic:
    - Without it: **template** agent still posts structured next steps (zero manual steps on your side).
 
 You do not download artifacts or run local commands for the default loop.
+
+**Practice without touching anything:** Actions → **practice-lab-drill** → Run workflow (or push to `lab/drills/` on `main`). A synthetic issue runs route + agent, then closes itself.
 
 Re-run routing: Actions → **route-github-event** → Run workflow → issue/PR number.
 

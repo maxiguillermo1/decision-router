@@ -21,6 +21,7 @@ from decision_router.agent_dispatch import (  # noqa: E402
     should_spawn_agent,
 )
 from decision_router.github_comment import post_route_comment  # noqa: E402
+from decision_router.practice_drill import is_lab_drill_title  # noqa: E402
 
 
 def _load_route(path: Path) -> dict[str, Any]:
@@ -112,6 +113,27 @@ def _run_cursor(prompt: str, repo: str) -> dict[str, Any]:
     }
 
 
+def _close_lab_drill(repo: str, number: int) -> dict[str, Any]:
+    proc = subprocess.run(
+        [
+            "gh",
+            "issue",
+            "close",
+            str(number),
+            "--repo",
+            repo,
+            "--comment",
+            "Lab drill complete — route + triage agent finished automatically.",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return {
+        "lab_drill_closed": proc.returncode == 0,
+        "stderr": proc.stderr.strip() if proc.returncode else "",
+    }
+
+
 def _skip_comment(route: dict[str, Any]) -> str:
     dest = route.get("destination")
     return (
@@ -173,6 +195,16 @@ def main() -> int:
     if not args.dry_run and repo and number and body:
         post_route_comment(str(repo), int(number), body)
         summary["comment_posted"] = True
+
+    title = str((route.get("state") or {}).get("title") or "")
+    if (
+        not args.dry_run
+        and kind == "issue"
+        and repo
+        and number
+        and is_lab_drill_title(title)
+    ):
+        summary.update(_close_lab_drill(str(repo), int(number)))
 
     print(json.dumps(summary, indent=2))
     if summary.get("error") and not summary.get("consumed"):

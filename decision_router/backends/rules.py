@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 from decision_router.backends.base import DecisionBackend
 from decision_router.github_event import looks_security, looks_spam, looks_wip, text_blob
+from decision_router.practice_drill import is_lab_drill_title
 from decision_router.types import (
     ChoiceAnswer,
     ChoiceQuestion,
@@ -172,6 +173,8 @@ class RulesBackend(DecisionBackend):
         return ScoreAnswer(label=labels[0], confidence=0.8)
 
     def _github_safe_auto_label(self, state: Mapping[str, Any]) -> NoulAnswer:
+        if is_lab_drill_title(str(state.get("title") or "")):
+            return NoulAnswer(value=True, confidence=0.9)
         if looks_security(state) or looks_spam(state):
             return NoulAnswer(value=False, confidence=0.9)
         assoc = str(state.get("author_association") or "").lower()
