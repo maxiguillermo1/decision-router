@@ -74,12 +74,24 @@ Optional secrets: `CURSOR_API_KEY` (cloud triage), `TYPESAFE_API_KEY` (Jev **onl
 
 Wire to your org: fork, tune heuristics in `decision_router/backends/rules.py`, or swap `--backend jev` when you have TypeSafe credentials.
 
+## Checkpoints (resumable tasks)
+
+Local task state (not committed):
+
+```bash
+.venv/bin/python scripts/task_checkpoint.py create --goal "Fix CI on PR 12" --repo .
+.venv/bin/python scripts/task_checkpoint.py step <task_id> "reproduced failure locally"
+.venv/bin/python scripts/task_checkpoint.py resume <task_id>
+```
+
+Stores goal, git identity, steps, decisions, errors, side-effect IDs (duplicate-safe), and budgets. Hermes prompts: `.hermes/prompts/`. Project continuity: `docs/CURRENT_STATE.md`, `AGENTS.md`.
+
 ## Wire to Hermes / Maxi
 
 1. Hermes cron or hook: build `state` from session metadata → run `chief.py --json` → spawn worker only for matching queue folder.
 2. GitHub Actions → download route artifact → Hermes worker consumes `queue/github/<destination>/*.json`.
 3. Maxi: same JSON schema as inbox handoff; rules backend mirrors classify-first / SAFE_AUTO before LLM.
-4. Replace rules with `--backend jev` when signups/keys are available (Vercel AI Gateway `typesafe-ai/jev`, Cloudflare `typesafe/jev`).
+4. Jev live calls: `TYPESAFE_API_KEY` (+ optional `TYPESAFE_BASE_URL` for gateways). Docs: https://jevwiki.ai/wiki/guides/quickstart.md — default model `jev-latest` via SDK.
 
 ## Guardrails (from playbook)
 

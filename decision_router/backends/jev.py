@@ -19,8 +19,8 @@ from decision_router.types import (
 
 
 class JevBackend(DecisionBackend):
-    def __init__(self, model: str = "jev-1.13.0") -> None:
-        self.model = model
+    def __init__(self, model: str | None = None) -> None:
+        self.model = model or os.environ.get("TYPESAFE_DEFAULT_MODEL", "jev-latest")
         if not os.environ.get("TYPESAFE_API_KEY"):
             raise RuntimeError(
                 "TYPESAFE_API_KEY is not set. Use rules backend or add a key."
