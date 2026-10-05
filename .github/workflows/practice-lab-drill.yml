@@ -1,6 +1,9 @@
 name: practice-lab-drill
 
 on:
+  schedule:
+    # Weekly unattended health check (Mondays 14:00 UTC)
+    - cron: "0 14 * * 1"
   workflow_dispatch:
     inputs:
       scenario:
@@ -60,5 +63,16 @@ jobs:
             --apply-labels \
             --post-comment
           python scripts/run_agent_from_route.py route-result.json --backend auto
+      - name: Assert drill routed as expected
+        run: |
+          python scripts/verify_drill_route.py drill-result.json route-result.json \
+            --output drill-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: practice-drill-${{ github.run_id }}
+          path: |
+            drill-result.json
+            route-result.json
+            drill-report.json
       - name: Drill metadata
-        run: cat drill-result.json
+        run: cat drill-report.json

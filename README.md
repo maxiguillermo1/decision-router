@@ -68,7 +68,9 @@ You do not download artifacts or run local commands for the default loop.
 
 Re-run routing: Actions → **route-github-event** → Run workflow → issue/PR number.
 
-Optional secrets: `CURSOR_API_KEY` (cloud triage), `TYPESAFE_API_KEY` (Jev backend on gray-zone events).
+Optional secrets: `CURSOR_API_KEY` (cloud triage), `TYPESAFE_API_KEY` (Jev **only** when rules confidence is below the floor — moderation cascade).
+
+**practice-lab-drill** also runs on a weekly schedule; each run asserts `destination` matches the scenario and uploads `drill-report.json`.
 
 Wire to your org: fork, tune heuristics in `decision_router/backends/rules.py`, or swap `--backend jev` when you have TypeSafe credentials.
 

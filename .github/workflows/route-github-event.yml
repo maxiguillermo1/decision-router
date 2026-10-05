@@ -35,7 +35,7 @@ jobs:
             --number "${{ inputs.issue_number }}" \
             --output "$RUNNER_TEMP/github-event.json"
           echo "GITHUB_EVENT_PATH=$RUNNER_TEMP/github-event.json" >> "$GITHUB_ENV"
-      - name: Decide route (rules or Jev if secret set)
+      - name: Decide route (rules first; Jev only on gray-zone when secret set)
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: |

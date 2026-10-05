@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from decision_router import system_one
+from decision_router.cascade import system_one_cascade
 from decision_router.github_event import state_from_event
 from decision_router.github_comment import format_route_comment, post_route_comment
 from decision_router.github_labels import label_for_destination
@@ -64,12 +65,6 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _backend_name(name: str) -> str:
-    if name == "jev" or (name == "auto" and os.environ.get("TYPESAFE_API_KEY")):
-        return "jev"
-    return "rules"
-
-
 def route_event(event: dict, *, backend: str, confidence_floor: float) -> dict:
     kind, state = state_from_event(event)
     if kind == "unknown":
@@ -94,7 +89,21 @@ def route_event(event: dict, *, backend: str, confidence_floor: float) -> dict:
         allowed = _PR_DEST
         fallback = "request_review"
 
-    result = system_one(state, questions, backend=backend)
+    cascade_meta: dict = {"primary": backend}
+    if backend == "auto":
+        result, cascade_meta = system_one_cascade(
+            state,
+            questions,
+            choice_key,
+            confidence_floor=confidence_floor,
+        )
+    elif backend == "jev":
+        result = system_one(state, questions, backend="jev")
+        cascade_meta = {"primary": "jev", "escalated_to_jev": False}
+    else:
+        result = system_one(state, questions, backend="rules")
+        cascade_meta = {"primary": "rules", "escalated_to_jev": False}
+
     answer = result.choices[choice_key]
     from decision_router.handoff import resolve_destination
 
@@ -124,6 +133,7 @@ def route_event(event: dict, *, backend: str, confidence_floor: float) -> dict:
             {"value": safe.value, "confidence": safe.confidence} if safe else None
         ),
         "state": state,
+        "cascade": cascade_meta,
         "_choice_key": choice_key,
         "_result": result,
     }
@@ -149,10 +159,11 @@ def main() -> int:
         print("Pass --event or set GITHUB_EVENT_PATH", file=sys.stderr)
         return 1
     event = json.loads(Path(event_path).read_text(encoding="utf-8"))
-    backend = _backend_name(args.backend)
 
     try:
-        out = route_event(event, backend=backend, confidence_floor=args.confidence_floor)
+        out = route_event(
+            event, backend=args.backend, confidence_floor=args.confidence_floor
+        )
     except RuntimeError as e:
         print(f"Backend error: {e}", file=sys.stderr)
         return 2
