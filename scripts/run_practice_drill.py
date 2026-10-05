@@ -44,6 +44,12 @@ def main() -> int:
         f"closes automatically after the triage agent runs._\n"
     )
 
+    subprocess.run(
+        ["gh", "label", "create", "lab-drill", "--repo", repo, "--force", "--color", "1d76db"],
+        check=True,
+        capture_output=True,
+    )
+
     proc = subprocess.run(
         [
             "gh",
@@ -60,18 +66,11 @@ def main() -> int:
         ],
         capture_output=True,
         text=True,
+        check=True,
     )
-    if proc.returncode != 0:
-        print(proc.stderr or proc.stdout, file=sys.stderr)
-        return proc.returncode
 
     url = proc.stdout.strip()
     number = url.rstrip("/").split("/")[-1]
-
-    subprocess.run(
-        ["gh", "label", "create", "lab-drill", "--repo", repo, "--force", "--color", "1d76db"],
-        capture_output=True,
-    )
 
     out = {
         "scenario": scenario.key,
