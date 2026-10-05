@@ -1,0 +1,26 @@
+[project]
+name = "decision-router"
+version = "0.1.0"
+description = "Cheap decision layer (Choice / Score / Noul) with optional Jev backend and JSON queue handoffs"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+jev = ["typesafe-sdk>=0.1.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+decision-chief = "chief:main"
+decision-github-route = "github_route:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["decision_router*"]

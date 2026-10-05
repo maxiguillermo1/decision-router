@@ -1,0 +1,36 @@
+name: route-github-event
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install router
+        run: pip install -e .
+      - name: Decide route
+        id: route
+        run: |
+          python github_route.py --no-queue --output route-result.json
+          cat route-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: github-route-${{ github.run_id }}
+          path: route-result.json
+      - name: Apply routing label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python github_route.py --apply-labels --no-queue

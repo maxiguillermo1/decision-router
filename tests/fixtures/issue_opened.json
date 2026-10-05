@@ -1,0 +1,13 @@
+{
+  "action": "opened",
+  "issue": {
+    "number": 42,
+    "title": "Login fails after password reset",
+    "body": "Steps to reproduce:\n1. Reset password\n2. Try login\nExpected: works",
+    "labels": [],
+    "author_association": "CONTRIBUTOR"
+  },
+  "repository": {
+    "full_name": "maxiguillermo1/decision-router"
+  }
+}
