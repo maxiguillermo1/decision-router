@@ -1,6 +1,6 @@
 # Current state — decision-router
 
-Updated: 2026-10-05
+Updated: 2026-10-05 (post-merge)
 
 ## Goal
 
@@ -30,12 +30,13 @@ Connect Hermes, GitHub, and optional **Jev** so repeated routing decisions stay 
 
 ## Next steps
 
-1. Point another product repo’s issues at the same workflow pattern (fork + tune `rules.py`).
-2. Hermes cron: `chief.py --json` → consume matching `queue/<destination>/` folder.
+1. Set repo secrets when you want live Jev/cascade in Actions: `gh secret set TYPESAFE_API_KEY` (and optional `CURSOR_API_KEY`).
+2. Point another product repo at the same workflow pattern (fork + tune `rules.py`).
 3. Calibrate `DEFAULT_CONFIDENCE_FLOOR` (0.85) on labeled examples from your org.
 
 ## Recent changes
 
+- **Merged to `main`:** PR #6 (`aa2a3a5`) — checkpoints, Hermes prompts, `jev-latest` default.
 - Checkpoints + `scripts/task_checkpoint.py` for resumable Hermes/GitHub tasks.
 - `.hermes/prompts/` for standard continuation templates.
-- Rules→Jev cascade in CI when secret present.
+- Rules→Jev cascade in CI when `TYPESAFE_API_KEY` secret is set.
